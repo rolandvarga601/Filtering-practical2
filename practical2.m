@@ -84,6 +84,9 @@ disp(max(spike_filter(y_lin3))/max(spike_filter(y_lin1)))
 % Checked from the plot
 delay = 0.9;
 
+%%
+plot(spike_filter(exciteSystem(STUDENTID,10000*ones(5/Ts1,1),fs1)),'.');
+
 %% DC offset
 for i = 1:2000
     y_all(i,:) = (spike_filter(exciteSystem(STUDENTID,0*10000*ones(5/Ts2,1),fs2)));
@@ -118,11 +121,11 @@ omega = 2*pi/4;
 sim_time = 60;
 t = 0:Ts1:sim_time-Ts1;
 t_length = size(t,2);
-ramp = linspace(1,4,size(t_length*0.6,2));
+ramp = linspace(1,4,t_length*0.6);
 %ramp = [linspace(1,4,size(t,2)/2) linspace(4,1,size(t,2)/2)];
 u = [zeros(1,t_length*0.2)...
     sin(2*pi/(2*40)*t(1:t_length*0.6)).*...
-    (100000*sin(omega*(ramp.*t(1:t_length*0.6))))...
+    (1000000*sin(omega*(ramp.*t(1:t_length*0.6))))...
     zeros(1,t_length*0.2)];
 figure()
 hold on
@@ -172,18 +175,25 @@ end
 % As you can see in our figure , we can expect that ...
 
 delay = 0.9;
-delay_samples = 0.9/Ts1;
+%delay_samples = 0.9/Ts1;
+delay_samples = 93;
 y_nodelay = y(delay_samples:end);
 u_nodelay = u(1:end-delay_samples+1)';
 
-r = 0.3;
+r = 0.6;
 lim = floor(size(u_nodelay,1)*r);
 
 method = 'po-moesp';
-n = 2;
+n = 5;
 s = 50;
 [A,B,C,D,x0,sv] = subspaceID(u_nodelay(1:lim),y_nodelay(1:lim),s,n,method);
 [yhat,xhat] = simsystem(A,B,C,D,x0,u_nodelay);
+
+%%
+figure
+hold on
+plot(y_nodelay,'.')
+plot(yhat,'.')
 
 %% Results
 figure
@@ -192,6 +202,24 @@ plot(y_nodelay(lim+1:end),'.')
 plot(yhat(lim+1:end),'.')
 vaf(y_nodelay(lim+1:end),yhat(lim+1:end))
 
+%% Residual
+figure()
+res = y_nodelay-yhat;
+res_data = timeseries(res,0:Ts1:(size(y_nodelay,1)-1)*Ts1);
+%autocorr(res)
+[c,lags] = xcorr(res,20,'normalized');
+stem(lags,c)
+
+%%
+%phi = xcorr(res,u_nodelay);
+[c,lags] = xcorr(res,u_nodelay,20,'normalized');
+stem(lags,c)
+
+%%
+y_zeroinput = spike_filter(exciteSystem(STUDENTID,0*u,fs1));
+%plot(y_zeroinput)
+[c,lags] = xcorr(y_zeroinput,20,'normalized');
+stem(lags,c)
 
 %% Assignment 3: Validation
 %%% VAF
